@@ -193,6 +193,7 @@ resource "aws_instance" "vray_instance" {
   vpc_security_group_ids = [aws_security_group.vray_security_group_web.id]
   subnet_id              = aws_subnet.vray_privated_subnet[0].id
   #associate_public_ip_address = true
+  user_data = file("${path.cwd}/install_el_apache.sh")
 
   tags = {
     Name = "Instance vRay Web Server"
@@ -212,6 +213,11 @@ resource "aws_instance" "vray_jumpbox" {
     Name = "Jumpbox vRay"
   }
 }
+
+#userdata directly in the instance
+
+
+/*
 ###########
 #ssh to jumbox then CP key and execute the commands to configure web server on instance 
 ###########
@@ -235,16 +241,28 @@ path.module cpntaining the moduel where the pathg.module epression is place
 path.root is the direcoty of root module
 path.cwd is the current work directory cdw
 
-*/
+
   }
 
   provisioner "file" {
     source      = "${var.key_name}.pem"
     destination = "/tmp/${var.key_name}.pem"
   }
+  provisioner "file" {
+    source      = "script.sh"
+    destination = "/tmp/script.sh"
+  }
   depends_on = [aws_instance.vray_jumpbox]
 
   provisioner "remote-exec" {
+    inline = [
+      "chmod +x /tmp/script.sh",
+      "/tmp/script.sh",
+    ]
+
+  }
+  #inside script are all the commands listes in the provisioner below.
+   provisioner "remote-exec" {
     inline = [
       "chmod 400 /tmp/${var.key_name}.pem",
       "ssh -i \"/tmp/${var.key_name}.pem\" ubuntu@${aws_instance.vray_instance.private_ip}",
@@ -255,10 +273,8 @@ path.cwd is the current work directory cdw
       "sudo systemctl start httpd",
     ]
   }
-
-
 }
-
+*/
 
 #---------Get the public IP of the instance------
 
