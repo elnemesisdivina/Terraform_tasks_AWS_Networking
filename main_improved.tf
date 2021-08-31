@@ -1,5 +1,6 @@
 ################################
-# This one is a DRY approach basic script for task1
+# This one is a DRY approach basic script for task2
+# Web server in instacne in private network
 #
 #################################
 terraform {
@@ -30,20 +31,16 @@ resource "aws_vpc" "vray_vpc" {
 }
 
 resource "aws_subnet" "vray_public_subnet" {
-  vpc_id = aws_vpc.vray_vpc.id
-  count  = 2
-  #cidr_block = locals.subnet_cidrs_public[count.index]
-  #availability_zone = "us-east-2a"
+  vpc_id     = aws_vpc.vray_vpc.id
+  count      = 2
   cidr_block = cidrsubnet(var.subnet_area_cidr, 8, 2 * (count.index))
   tags = {
     Name = "vRay Public${count.index} <-> Internet Gateway"
   }
 }
 resource "aws_subnet" "vray_privated_subnet" {
-  vpc_id = aws_vpc.vray_vpc.id
-  count  = 2
-  #cidr_block = locals.subnet_cidrs_privated[count.index]
-  #availability_zone = "us-east-2a"
+  vpc_id     = aws_vpc.vray_vpc.id
+  count      = 2
   cidr_block = cidrsubnet(var.subnet_area_cidr, 8, 2 * (count.index + 1) - 1)
   tags = {
     Name = "vRay Privated${count.index} -> NAT Gateway${count.index}"
@@ -192,7 +189,8 @@ resource "aws_instance" "vray_instance" {
   key_name               = aws_key_pair.vray_key_pair.key_name
   vpc_security_group_ids = [aws_security_group.vray_security_group_web.id]
   subnet_id              = aws_subnet.vray_privated_subnet[0].id
-  #associate_public_ip_address = true
+
+  user_data = file("${path.cwd}/install_el_apache.sh")
 
   tags = {
     Name = "Instance vRay Web Server"
@@ -212,65 +210,18 @@ resource "aws_instance" "vray_jumpbox" {
     Name = "Jumpbox vRay"
   }
 }
-###########
-#ssh to jumbox then CP key and execute the commands to configure web server on instance 
-###########
-
-resource "null_resource" "copykey" {
-
-  provisioner "remote-exec" {
-    inline = ["echo 'Wait until SSH is ready'"]
-  }
-
-  connection {
-    type        = "ssh"
-    host        = aws_instance.vray_jumpbox.public_ip
-    user        = "ubuntu"
-    private_key = file("${path.cwd}/${var.key_name}.pem")
-    #file("${path.cwd}/${var.key_name}.pem")
-    #filename = "${path.cwd}/key.pem"
-    # "${file(var.key_path)}"
-    /*options 
-path.module cpntaining the moduel where the pathg.module epression is place
-path.root is the direcoty of root module
-path.cwd is the current work directory cdw
-
-*/
-  }
-
-  provisioner "file" {
-    source      = "${var.key_name}.pem"
-    destination = "/tmp/${var.key_name}.pem"
-  }
-  depends_on = [aws_instance.vray_jumpbox]
-
-  provisioner "remote-exec" {
-    inline = [
-      "chmod 400 /tmp/${var.key_name}.pem",
-      "ssh -i \"/tmp/${var.key_name}.pem\" ubuntu@${aws_instance.vray_instance.private_ip}",
-      "apt install update",
-      "yum -y install httpd",
-      "echo \"<p> My Instance! </p>\" >> /var/www/html/index.html",
-      "sudo systemctl enable httpd",
-      "sudo systemctl start httpd",
-    ]
-  }
-
-
-}
-
 
 #---------Get the public IP of the instance------
 
 output "instance_ip_addr" {
   value = aws_instance.vray_instance.private_ip
-  #  value       = "{aws_instance.vray_instance.privated_ip}"
+
   description = "The private IP address of the vRay instance."
 }
 
 output "jumpbox_ip_addr" {
   value = aws_instance.vray_jumpbox.public_ip
-  #  value       = "{aws_instance.vray_instance.public_ip}"
+
   description = "The public IP address of the vRay Jumpbox."
 }
 
@@ -278,7 +229,7 @@ output "jumpbox_ip_addr" {
 #--------creation of Privated Key-----------
 
 variable "key_name" {} #to ask creator a name for the keypair to be created so the string enter here will be used for the key!!!
-#variable "key_path" { default = "/Users/rcastaneda/terraformvray/" }
+
 resource "tls_private_key" "vray_pk" {
   algorithm = "RSA"
   rsa_bits  = 4096
@@ -296,10 +247,6 @@ resource "aws_key_pair" "vray_key_pair" {
   provisioner "local-exec" { #lazy as Iam use this to change permissions on file on local MAchine
     command = "chmod 400 ./'${var.key_name}'.pem"
   }
-  /*  provisioner "local-exec" {#add permanently to ssh
-    command = "ssh-add -K ./'${var.key_name}'.pem"
-  }
-*/
 }
 
 #-------check PK generated fort this instance-------
