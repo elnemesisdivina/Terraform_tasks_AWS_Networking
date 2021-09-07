@@ -1,5 +1,5 @@
 resource "aws_security_group" "vray_security_group_web" {
-  name        = "vray_security_group_SG_web"
+  name_prefix = "vray_security_group_SG_web"
   description = "Allow SSH, WEB inbound connections"
   vpc_id      = var.vpc_id
 
