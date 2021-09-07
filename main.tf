@@ -23,6 +23,16 @@ module "jumpbox" {
   key_name            = var.key_name
   vpc_id              = module.vpc.vpc_id
   subnet_id           = module.vpc.public_subnet_ids[0]
-  user_data_path      = "install_el_apache.sh"
+  user_data_path      = "dummy.sh"
   associate_public_ip = true
+}
+
+module "private" {
+  source = "./modules/ec2"
+
+  key_name            = var.key_name
+  vpc_id              = module.vpc.vpc_id
+  subnet_id           = module.vpc.private_subnet_ids[0]
+  user_data_path      = "install_el_apache.sh"
+  associate_public_ip = false
 }
