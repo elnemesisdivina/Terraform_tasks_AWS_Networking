@@ -41,3 +41,14 @@ resource "aws_instance" "vray_instance" {
     Name = "Instance vRay Web Server"
   }
 }
+
+resource "aws_eip" "vray_eip" {
+  count = var.associate_public_ip ? 1 : 0
+}
+
+resource "aws_eip_association" "eip_assoc" {
+  count = var.associate_public_ip ? 1 : 0
+
+  instance_id   = aws_instance.vray_instance.id
+  allocation_id = aws_eip.vray_eip[0].id
+}
