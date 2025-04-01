@@ -1,4 +1,4 @@
-# Terraform_tasks
+# Terraform_Archiotecture of IaC networking in AWS
 This is a Terraform script to create two instances and validate the plumbing to get expose to the internet and have ingress communications as well on port 22, this pic just have a mind map of what is going on behind scenes on AWS
 
 
